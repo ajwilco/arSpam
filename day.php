@@ -83,9 +83,9 @@ Print <<< END
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script type="text/javascript">
 	google.load('visualization', '1.0', {'packages':['corechart']});
-	google.setOnLoadCallback(drawChart);
+	google.setOnLoadCallback(drawHourlyHits);
 	
-	function drawChart() {
+	function drawHourlyHits() {
 		// Create the data table.
 		var data = new google.visualization.DataTable();
 		data.addColumn('string', 'Hour');
@@ -96,7 +96,7 @@ Print <<< END
         var options = {'title':'Hourly Hits', 'width':400, 'height':300};
 
         // Instantiate and draw our chart, passing in some options.
-        var chart = new google.visualization.PieChart(document.getElementById('chart_div'));
+        var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
         chart.draw(data, options);
       }
     </script>
@@ -109,7 +109,7 @@ doLayoutHeader();
 
 Print <<< END
 <!--Div that will hold the pie chart-->
-    <div id="chart_div" style="float:left;"></div>
+    <div id="curve_chart" style="float:left;"></div>
 	
 <div style="text-align:center;padding:1em;">
 	<form action="{$_PHP[self]}" method="get">
