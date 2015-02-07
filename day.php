@@ -82,21 +82,27 @@ Print <<< END
 <!--Load the AJAX API-->
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script type="text/javascript">
-	google.load('visualization', '1.0', {'packages':['corechart']});
+	google.load("visualization", "1.1", {packages:["bar"]});
 	google.setOnLoadCallback(drawHourlyHits);
 	
 	function drawHourlyHits() {
 		// Create the data table.
-		var data = new google.visualization.DataTable();
-		data.addColumn('string', 'Hour');
-		data.addColumn('number', 'Hits');
-		data.addRows([{$graphData}]);
+		
+		var data = google.visualization.arrayToDataTable([
+          ['Hour', 'Hits'],
+		  {$graphData}
+        ]);
+		
+		var options = {
+          chart: {
+            title: 'Hits by the Hour',
+            subtitle: '',
+          },
+          bars: 'horizontal' // Required for Material Bar Charts.
+        };
 
-        // Set chart options
-        var options = {'title':'Hourly Hits', 'width':400, 'height':300};
+        var chart = new google.charts.Bar(document.getElementById('barchart_material'));
 
-        // Instantiate and draw our chart, passing in some options.
-        var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
         chart.draw(data, options);
       }
     </script>
@@ -109,7 +115,7 @@ doLayoutHeader();
 
 Print <<< END
 <!--Div that will hold the pie chart-->
-    <div id="curve_chart" style="float:left;"></div>
+    <div id="barchart_material" style="float:left;"></div>
 	
 <div style="text-align:center;padding:1em;">
 	<form action="{$_PHP[self]}" method="get">
