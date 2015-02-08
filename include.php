@@ -13,9 +13,9 @@ ob_start();
 
 #  Connect to mysql
  $hostname="localhost";
-$username="warfactions";
-$password="74523698753";
-$dbname="warfactions";
+$username="arSpam";
+$password="Lio14lsx!";
+$dbname="arspam";
 
 mysql_connect($hostname,$username, $password);
 mysql_select_db($dbname);
