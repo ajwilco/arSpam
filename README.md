@@ -2,4 +2,4 @@
 Manipulating email metadata.
 
 Currently I'm testing/uploading to:
-http://www.warfactions.com/arspam/
+http://ajwilco.ddns.net:8080/arSpam

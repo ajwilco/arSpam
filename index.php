@@ -3,56 +3,108 @@ include('include.php');
 
 $pagename="";
 doPageOpen();
-doLayoutHeader();
 
-$total=mysql_fetch_array(mysql_query("SELECT sum(countsTotal) as sum from ar_metadata"));
 
-if(is_numeric($_GET[minHits])) $minHits=$_GET[minHits]; else $minHits=100;
-	
-if($_GET[everything]){
-	$everythingForm="<input type='hidden' name='everything' value='true' />";
-	$tableHead="<th>Name</th><th>Period</th><th>Key</th><th>Total</th>";
-	$query=mysql_query("SELECT name, period, domainKey, countsTotal FROM ar_metadata WHERE countsTotal>=$minHits ORDER BY countsTotal DESC") or print mysql_error();
-}else{
-	$tableHead="<th>Percent</th><th>Key</th><th>Total</th>";
-	$query=mysql_query("SELECT domainKey, sum(countsTotal) AS countsTotal FROM ar_metadata GROUP BY domainKey ORDER BY countsTotal DESC") or print mysql_error();
+////
+//Build data for graph and table.
+///
+$graphHead="['Class";
+$i=1;
+$j=0;
+$k=0;
+
+$classQuery=mysql_query("select * from classes order by name asc");
+while($class=mysql_fetch_array($classQuery)){
+	$graphHead .= "', '" . $class[name];
+	$classes[$j]=$class[name];
+	$table[0][$class[name]]=$class[name];
+	$j++;
+}
+$graphHead .= "', { role: 'annotation' }]";
+
+$hourlyClassQuery=mysql_query("SELECT COUNT(id) as count, YEAR(date) as year, MONTH(date) as month,
+									  DAY(date) as day, HOUR(date) as hour, className, date FROM v_securetide 
+									  GROUP BY year, month, day, hour, className 
+									  ORDER BY year asc, month asc, day asc, hour asc, className asc");
+while($hourlyClass=mysql_fetch_array($hourlyClassQuery)){
+
+	$hour=date('m-d gA',strtotime($hourlyClass[date]));
+	$lastStamp=$stamp;
+	$stamp=date('Y-m-d H', strtotime($hourlyClass[date]));
+	if($lastStamp!=$stamp){
+		$hours[$k]=$stamp;
+		$k++;
+	}
+	$table[$stamp][0]=$hour;
+	$table[$stamp][$hourlyClass[className]]=$hourlyClass[count];
 }
 
-$totalRows=mysql_num_rows($query);
-
-Print <<< END
-<div style="text-align:center;padding:1em;">
-	<a href="{$M}">By Server</a> | 
-	<a href="{$M}?everything=true">All Data</a><br /><br />
-	<form action="{$_PHP[self]}" method="get">
-		Minimum Hits from Server: <input type="text" name="minHits" value="{$minHits}" />
-		{$everythingForm}
-		<input type="submit" value="Show" />
-	</form>
-</div>
-<h3>({$totalRows} rows.)</h3>
-<table border="1" bordercolor="gray" cellpadding="10" cellspacing="0" width="100%">
-	<tr>
-		{$tableHead}
-	</tr>
-END;
-
-	while(($domain=mysql_fetch_array($query)) && $domain[countsTotal]>=$minHits){
-		if($_GET[everything]){
-			$tableData="<td>{$domain[name]}</td><td>{$domain[period]}</td><td>{$domain[domainKey]}</td><td>{$domain[countsTotal]}</td>";
-		}else{
-			$percent=round($domain[countsTotal]*100/$total[sum], 2);
-			$tableData="<td>{$percent}%</td><td>{$domain[domainKey]}</td><td>{$domain[countsTotal]}</td>";
-		}
-		
-PRINT <<< END
-		<tr>
-			{$tableData}
-		</tr>
-END;
+$x=0;
+$tableData="";
+while($x<$k){
+	$tableData.="['".$table[$hours[$x]][0]."', ";
+	$y=0;
+	while($y<$j){
+		$tableData.="{$table[$hours[$x]][$classes[$y]]}, ";
+		$y++;
 	}
+	$tableData.="''], 
+";
+	$x++;
+}
+$tableData=substr($tableData, 0, -4);
+
+
+/*
+Print "<pre>";
+Print $graphHead."<br /><br />";
+
+Print $tableData."<br /><br />";
+print_r($table);
+print "</pre>";
+*/
+////
+//Inside the <head>:
+///
+
 Print <<< END
-</table>
+<!--Load the AJAX API-->
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+<script type="text/javascript">
+	google.load("visualization", "1", {packages:["corechart"]});
+	google.setOnLoadCallback(drawChart);
+	
+	function drawChart() {
+		// Create the data table.
+		
+		var data = google.visualization.arrayToDataTable([
+        {$graphHead},
+        {$tableData}
+      ]);
+
+      var options = {
+        width: 890,
+        height: 400,
+        legend: { position: 'top', maxLines: 3 },
+        bar: { groupWidth: '75%' },
+        isStacked: true,
+      };
+
+        var chart = new google.visualization.ColumnChart(document.getElementById("columnchart_values"));
+
+        chart.draw(data, options);
+      }
+    </script>
+END;
+doLayoutHeader();
+
+
+
+
+
+Print <<< END
+<!--Div that will hold the pie chart-->
+    <div id="columnchart_values"></div>
 END;
 
 
