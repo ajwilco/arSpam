@@ -87,8 +87,8 @@ Print <<< END
 	</head>
 	<body>
 		<h1 style="text-align:center;">AppRiver Spam MetaData Tool</h1>
-		<div style="float:left;height:95%;width:16%;">&nbsp;</div>
-		<div style="border:solid #CCC 1px;float:left;height:95%;padding:5px;width:66%;min-width:290px;">
+		<!--<div style="float:left;height:95%;width:16%;">&nbsp;</div>
+		<div style="border:solid #CCC 1px;float:left;height:95%;padding:5px;width:66%;min-width:290px;">-->
 END;
 	Return;
 }
