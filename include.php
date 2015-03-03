@@ -100,9 +100,9 @@ function dofooter(){
 	
 Print <<< END
 		</div>
-		<div style="position:absolute;right:15px;top:15px;">
+		<span style="position:absolute;right:15px;top:15px;">
 			Created by Aaron Wilkins.
-		</div>
+		</span>
 	</body>
 </html>
 END;
