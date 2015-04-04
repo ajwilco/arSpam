@@ -1,6 +1,7 @@
 <html><body><pre>
 <?php
 include('../include.php');
+ini_set('max_execution_time', 2400);
 date_default_timezone_set('UTC'); 
 
 $fp = fopen('logs.txt', 'r');
@@ -28,11 +29,12 @@ $x++;
 	//$i++;
 	
 	// I honestly just prefer referential tables of foreign keys over ENUM columns..  Fear of huge databases I guess?
+	
 	$tests=str_getcsv($data[6],",");
 	foreach ($tests as $test) {
 		if($test!=""){
+			$test=trim($test);
 			do{
-				print $test;
 				$findTest=mysql_fetch_array(mysql_query("select id from ar_tests where name='$test'")) or print mysql_error();
 				if($findTest[id]=="") mysql_query("insert into ar_tests set name='{$test}'") or print mysql_error();
 			}while($findTest[id]=="");

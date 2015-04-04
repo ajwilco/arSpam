@@ -13,9 +13,9 @@ ob_start();
 
 #  Connect to mysql
  $hostname="localhost";
-$username="warfactions";
-$password="74523698753";
-$dbname="warfactions";
+$username="arSpam";
+$password="Lio14lsx!";
+$dbname="arspam";
 
 mysql_connect($hostname,$username, $password);
 mysql_select_db($dbname);
@@ -87,8 +87,8 @@ Print <<< END
 	</head>
 	<body>
 		<h1 style="text-align:center;">AppRiver Spam MetaData Tool</h1>
-		<div style="float:left;height:95%;width:16%;">&nbsp;</div>
-		<div style="border:solid #CCC 1px;float:left;height:95%;padding:5px;width:66%;min-width:290px;">
+		<!--<div style="float:left;height:95%;width:16%;">&nbsp;</div>
+		<div style="border:solid #CCC 1px;float:left;height:95%;padding:5px;width:66%;min-width:290px;">-->
 END;
 	Return;
 }
@@ -100,9 +100,9 @@ function dofooter(){
 	
 Print <<< END
 		</div>
-		<div style="position:absolute;right:15px;top:15px;">
+		<span style="position:absolute;right:15px;top:15px;">
 			Created by Aaron Wilkins.
-		</div>
+		</span>
 	</body>
 </html>
 END;
