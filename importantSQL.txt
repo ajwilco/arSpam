@@ -1,0 +1,47 @@
+v_data:	
+	(SELECT s.id    as emailID, 
+			         s.date, 
+			         s.sendingIP, 
+			r.ip    as receivingIP, 
+			co.id   as countryID, 
+			co.name as country, 
+			f.id    as failID, 
+			t.id    as testID, 
+			t.name  as test, 
+			cl.id   as classID, 
+			cl.name as className
+
+	FROM test_fails f
+	JOIN tests t       ON t.id=f.test
+	JOIN securetide s  ON s.id=f.record
+	JOIN classes cl    ON cl.id=s.class
+	JOIN countries co  ON co.id=s.country
+	JOIN receivingip r ON r.id=s.receivingIP)
+	
+	UNION
+	
+	(SELECT s.id    as emailID, 
+			         s.date, 
+			         s.sendingIP, 
+			r.ip    as receivingIP, 
+			co.id   as countryID, 
+			co.name as country, 
+			''      as failID, 
+			''      as testID, 
+			''      as test, 
+			cl.id   as classID, 
+			cl.name as className
+
+	FROM securetide s
+	JOIN classes cl    ON cl.id=s.class
+	JOIN countries co  ON co.id=s.country
+	JOIN receivingip r ON r.id=s.receivingIP)
+	
+	
+	
+	
+	
+	
+
+
+SELECT class, count(distinct(emailID)) as count FROM `v_data` group by class order by count desc

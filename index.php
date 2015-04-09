@@ -13,8 +13,8 @@ print "<pre>";
 print_r($_POST);
 print "</pre>";
 */
-$formOptions=array("classes", "countries");
-$formOption= array("class",   "country");
+$formOptions=array("classes", "tests", "countries");
+$formOption= array("class", "test", "country");
 foreach ($formOptions as $optionKey => $option){
 	if($_POST[$option]){
 		if($where=="") $where.=" WHERE "; else $where.=" AND ";
@@ -24,7 +24,7 @@ foreach ($formOptions as $optionKey => $option){
 				$where.=$formOption[$optionKey]."ID!='{$item}'";
 			}
 		}else{
-			$classSelected=" selected";
+			$includeSelected[$option]=" selected";
 			foreach($_POST[$option] as $key => $item){
 				if($key==0) $where.="("; else $where.=" OR ";
 				$where.=$formOption[$optionKey]."ID='{$item}'";
@@ -49,7 +49,12 @@ $i=1;
 $j=0;
 $k=0;
 
-$classQuery=mysql_query("select count(id) as count, className as name from v_securetide{$where} group by className order by count desc, className asc limit 9");
+if(!$where){
+	$OtherRecords=mysql_num_rows(mysql_query("select id from securetide"));
+	$OtherFails=mysql_num_rows(mysql_query("select id from test_fails"));
+}
+
+$classQuery=mysql_query("select count(distinct(emailID)) as count, className as name from v_data{$where} group by name order by count desc, name asc limit 9");
 while($class=mysql_fetch_array($classQuery)){
 	$timeline.="tl.addColumn('number', '{$class[name]}');
 ";
@@ -64,7 +69,6 @@ while($class=mysql_fetch_array($classQuery)){
 }
 //Only build "Other" field if data isn't being filtered
 if(!$where){
-	$OtherRecords=mysql_num_rows(mysql_query("select id from v_securetide"));
 	$timeline.="tl.addColumn('number', 'Other');
 tl.addRows([";
 	$classPieData.=",
@@ -76,7 +80,7 @@ tl.addRows([";
 	$graphHead.="']";
 	$percentHead.="]";
 }
-$hourlyClassQuery=mysql_query("SELECT COUNT(id) as count, YEAR(date) as year, MONTH(date) as month,
+$hourlyClassQuery=mysql_query("SELECT COUNT(distinct(emailID)) as count, YEAR(date) as year, MONTH(date) as month,
 									  DAY(date) as day, HOUR(date) as hour, className, date,
 									  CASE
 										WHEN minute(date) BETWEEN 0 and 14 THEN '00'
@@ -84,7 +88,7 @@ $hourlyClassQuery=mysql_query("SELECT COUNT(id) as count, YEAR(date) as year, MO
 										WHEN minute(date) BETWEEN 30 and 44 THEN '30'
 										WHEN minute(date) BETWEEN 45 and 59 THEN '45'
 									  END AS intervals
-							   FROM v_securetide{$where}
+							   FROM v_data{$where}
 							   GROUP BY year, month, day, hour, intervals, className 
 							   ORDER BY year asc, month asc, day asc, hour asc, intervals asc, className asc");
 
@@ -163,14 +167,30 @@ $tableDataPercent=substr($tableDataPercent, 0, -4);
 ///
 $countryData="['Country', 'Messages']";
 
-$countryPieQuery=mysql_query("select id, country, count(id) as count from v_securetide{$where} group by country order by count desc");
+$countryPieQuery=mysql_query("select country, count(distinct(emailID)) as count from v_data{$where} group by country order by count desc");
 while($country=mysql_fetch_array($countryPieQuery)){
 	$countryData.=", 
 	['{$country[country]}', {$country[count]}]";
 }
 
 
+/*
+////
+//Build Tests Pie
+///
+$testPieData="['Test', 'Messages']";
+$testPieQuery=mysql_query("select test, count(failID) as count from v_data{$where} group by test order by count desc limit 14");
+while($fail=mysql_fetch_array($testPieQuery)){
+	$testPieData.=",
+	['{$fail[test]}', {$fail[count]}]";
+	$OtherFails-=$fail[count];
+}
+if(!$where){
+	$testPieData.=",
+	['Other', {$OtherFails}]";
+}
 
+*/
 ////
 //Inside the <head>:
 ///
@@ -199,7 +219,7 @@ $tableSpecs="<table style='background:#FFFFFF;border:solid #CCCCCC 1px;padding:1
 ////
 // Build Sending IP Table
 ///
-$senderQuery=mysql_query("select sendingIP, count(id) as count from v_securetide{$where} group by sendingIP order by count desc limit 11");
+$senderQuery=mysql_query("select sendingIP, count(distinct(emailID)) as count from v_data{$where} group by sendingIP order by count desc limit 11");
 $sendingIPtable="{$tableSpecs}<tr><td><strong>Sending IP</strong></td><td><strong>Total</strong></td></tr>";
 while($sender=mysql_fetch_array($senderQuery)){
 	if($grayed=="") $grayed=" style='background-color:#CCCCCC;'"; else $grayed="";
@@ -213,7 +233,7 @@ $grayed="";
 ////
 // Build Receiving IP Table
 ///
-$receiverQuery=mysql_query("select receivingIP, count(id) as count from v_securetide{$where} group by receivingIP order by count desc limit 11");
+$receiverQuery=mysql_query("select receivingIP, count(distinct(emailID)) as count from v_data{$where} group by receivingIP order by count desc limit 11");
 $receivingIPtable="{$tableSpecs}<tr><td><strong>Receiving Server</strong></td><td><strong>Total</strong></td></tr>";
 while($receiver=mysql_fetch_array($receiverQuery)){
 	if($grayed=="") $grayed=" style='background-color:#CCCCCC;'"; else $grayed="";
@@ -235,6 +255,13 @@ while($class=mysql_fetch_array($classQuery)){
 	$classOptions.="<option value='{$class[id]}'{$selected}>{$class[name]}</option>";
 }
 
+//All Tests
+$testQuery=mysql_query("select id, name from tests order by name asc");
+while($test=mysql_fetch_array($testQuery)){
+	if(in_array($test[id], $_POST[tests])) $selected=" selected"; else $selected=null;
+	$testOptions.="<option value='{$test[id]}'{$selected}>{$test[name]}</option>";
+}
+
 //All Countries
 $countryQuery=mysql_query("select id, name from countries order by name asc");
 while($country=mysql_fetch_array($countryQuery)){
@@ -249,46 +276,139 @@ while($sender=mysql_fetch_array($senderQuery)){
 
 
 Print <<< END
-	<div style="width:99%;">
-		<form action="{$_PHP[self]}" method="post">
-			<div style="float:left;"><fieldset>
-				<legend>Classes</legend>
-				<select name="classSelect"><option value="0">Exclude</option><option value="1"{$classSelected}>Include</option></select><br />
-				<select multiple name="classes[]">
-					<option value="top">[Top 9]</option>
-					{$classOptions}
-				</select>
-			</fieldset></div>
-			
-			<div style="float:left;"><fieldset>
-				<legend>Countries</legend>
-				<select name="countrySelect"><option value="0">Exclude</option><option value="1">Include</option></select><br />
-				<select multiple name="countries[]">
-					<option value="top">[Top 9]</option>
-					{$countryOptions}
-				</select>
-			</fieldset></div>
-			
-			<div style="float:left;"><fieldset>
-				<legend>Sender</legend>
-				<select name="senderSelect"><option value="0">Exclude</option><option value="1">Include</option></select><br />
-				<select multiple name="senders[]">
-					<option value="top">[Top 9]</option>
-					{$senderOptions}
-				</select>
-			</fieldset></div>
-			<input type="submit" value="Filter" style="clear:left;display:block;margin:.5em;" /><br />
-		</form>
-	</div>
-
-	<div class="chartHolder" id="timeline_div" style="width:99%;height:450px;"></div><br /><br />
-	<form><input type="button" id="b1" value="Show Percentages" /></form>
-	<div class="chartHolder" id="columnchart_values" style="width:99%;height:450px;"></div>
-	<div style="width:33%;float:left;min-width:400px;">{$sendingIPtable}</div>
-	<div style="width:33%;float:left;min-width:400px;">{$receivingIPtable}</div>
-	<div class="chartHolder" id="piechart_classes" style="width:33%;height:325px;float:left;"></div>
-	<div class="chartHolder" id="piechart_country" style="clear:left;width:33%;height:450px;float:left;"></div>
-	<div class="chartHolder" id="map_values" style="width:66%;height:450px;float:left;"></div>
+   <section id="filter" class="container content-section text-center">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2">
+                <h2>Filter Results</h2>
+				<form action="{$_PHP[self]}#classes" method="post">
+					<div style="float:left;"><fieldset>
+						<legend>Classes</legend>
+						<select name="classesSelect"><option value="0">Exclude</option><option value="1"{$includeSelected[classes]}>Include</option></select><br />
+						<select multiple name="classes[]">
+							<option value="top">[Top 9]</option>
+							{$classOptions}
+						</select>
+					</fieldset></div>
+					
+					<div style="float:left;"><fieldset>
+						<legend>Tests</legend>
+						<select name="classesSelect"><option value="0">Exclude</option><option value="1"{$includeSelected[tests]}>Include</option></select><br />
+						<select multiple name="classes[]">
+							<option value="top">[Top 9]</option>
+							{$testOptions}
+						</select>
+					</fieldset></div>
+					
+					<div style="float:left;"><fieldset>
+						<legend>Countries</legend>
+						<select name="countriesSelect"><option value="0">Exclude</option><option value="1"{$includeSelected[countries]}>Include</option></select><br />
+						<select multiple name="countries[]">
+							<option value="top">[Top 9]</option>
+							{$countryOptions}
+						</select>
+					</fieldset></div>
+					
+					<div style="float:left;"><fieldset>
+						<legend>Top Senders</legend>
+						<select name="senderSelect"><option value="0">Exclude</option><option value="1">Include</option></select><br />
+						<select multiple name="senders[]">
+							<option value="top">[Top 9]</option>
+							{$senderOptions}
+						</select>
+					</fieldset></div>
+					<input type="submit" value="Filter" style="clear:left;display:block;margin:.5em;" /><br />
+				</form>
+            </div>
+        </div>
+    </section>
+	
+	
+	
+	
+	
+   <section id="classes" class="container content-section text-center">
+        <div class="row">
+            <div class="col-lg-12">
+                <h2>Class Data</h2>
+				
+				<button type="button" class="btn btn-info" data-toggle="collapse" data-target="#classStack">Stacked by Interval</button>
+				<div id="classStack" class="collapse in">
+					<form style="text-align:left;">
+						<button type="button" class="btn btn-default btn-lg" id="b1" />
+							<i class='fa fa-align-justify fa-rotate-90'></i> Switch to Percent
+						</button>
+					</form>
+					<div class="chartHolder" id="columnchart_values" style="width:99%;height:450px;"></div>
+				</div>
+				
+				<button type="button" class="btn btn-info" data-toggle="collapse" data-target="#classTimeline">Class Timeline</button>
+				<div id="classTimeline" class="collapse in">
+					<div class="chartHolder" id="timeline_div" style="width:99%;height:450px;"></div>
+				</div>
+				
+				<button type="button" class="btn btn-info" data-toggle="collapse" data-target="#classTotals">Class Totals</button>
+				<div id="classTotals" class="collapse in">
+					<div class="row">
+						<div class="col-lg-4">
+							<div class="chartHolder" id="piechart_classes" style="width:100%;height:450px;"></div>
+						</div>
+						<div class="col-lg-8">
+							<div class="chartHolder" id="barchart_classes" style="width:100%;height:450px;"></div>
+						</div>
+					</div>
+				</div>
+				
+			</div>
+		</div>
+	</section>
+	
+	
+	<section id="tests" class="container content-section text-center">
+		<div class="row">
+			<div class="col-lg-12">
+				<h2>Tests Failed Data</h2>
+				
+				<button type="button" class="btn btn-info" data-toggle="collapse" data-target="#failTotals">Test Fail Totals</button>
+				<div id="failTotals" class="collapse in">
+					<div class="row">
+						<div class="col-lg-4">
+							<div class="chartHolder" id="piechart_fails" style="width:100%;height:450px;"></div>
+						</div>
+						<div class="col-lg-8">
+							<div class="chartHolder" id="barchart_fails" style="width:100%;height:450px;"></div>
+						</div>
+					</div>
+				</div>
+				
+			</div>
+		</div>
+	</section>
+	
+	
+   <section id="location" class="container content-section text-center">
+        <div class="row">
+			<h2>Location Data</h2>
+            <div class="col-lg-3">
+				<div class="chartHolder" id="piechart_country" style="clear:left;width:100%;height:450px;"></div>
+			</div>
+			<div class="col-lg-9">
+				<div class="chartHolder" id="map_values" style="width:100%;height:450px;"></div>
+			</div>
+		</div>
+	</section>
+	
+	
+   <section id="servers" class="container content-section text-center">
+        <div class="row">
+			<h2>Server Data</h2>
+            <div class="col-lg-6">
+				<div style="width:100%;">{$sendingIPtable}</div>
+			</div>
+			<div class="col-lg-6">
+				<div style="width:100%;">{$receivingIPtable}</div>
+			</div>
+		</div>
+	</section>
 
 	
 	
@@ -296,21 +416,23 @@ Print <<< END
 <!--Load the AJAX API-->
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script type="text/javascript">
+	var tl,
+		tlOptions,
+		data=[],
+		chart,
+		options,
+		current=0,
+		dataClassPie,
+		dataTestPie,
+		optionsClassPie,
+		optionsClassColumn,
+		dataCountryPie,
+		optionsCountryPie,
+		dataHeatMap,
+		optionsHeatMap;
+	
 	google.load("visualization", "1", {packages:["corechart", "geomap", "annotatedtimeline", "controls"]});
 	google.setOnLoadCallback(getVars);
-	
-	var tl;
-	var tlOptions;
-	var data=[];
-	var chart;
-	var options;
-	var current=0;
-	var dataClassPie;
-	var optionsClassPie;
-	var dataCountryPie;
-	var optionsCountryPie;
-	var dataHeatMap;
-	var optionsHeatMap;
 	
 	var button = document.getElementById('b1');
 	button.onclick = function() {
@@ -354,17 +476,26 @@ Print <<< END
 		chart = new google.visualization.ColumnChart(document.getElementById("columnchart_values"));
 
 	
-		//Class Pie Chart Data
+		//Class Pie+Column Chart Data
 		dataClassPie = google.visualization.arrayToDataTable([
 			$classPieData
 		]);
 		optionsClassPie = {
-			title: 'Messages per Class',
-			height: 325,
-			chartArea: { top: 20, width: '100%', height: '100%' },
 			legend: 'none',
+			height: 450,
+			chartArea: { width: '96%', height: '100%' },
 			sliceVisibilityThreshold: 1/100
 		};
+		optionsClassColumn={
+			legend: 'none',
+			chartArea: { width: '85%' },
+			height: 450
+		};
+		
+		//Test Pie+Column Chart Data
+		dataTestPie = google.visualization.arrayToDataTable([
+			$testPieData
+		]);
 
 	
 		//Country Pie Data
@@ -402,10 +533,20 @@ Print <<< END
         timeline.draw(tl, tlOptions);
 		
 		
-		// Create Class Pie Chart
+		// Create Class Pie and Column Chart
 		var classPie = new google.visualization.PieChart(document.getElementById("piechart_classes"));
-        classPie.draw(dataClassPie, optionsClassPie);	  
-	  
+		classPie.draw(dataClassPie, optionsClassPie);	  
+		
+		var classColumns = new google.visualization.ColumnChart(document.getElementById("barchart_classes"));
+		classColumns.draw(dataClassPie, optionsClassColumn);	
+
+		// Create Test Pie and Column Chart
+		var testPie = new google.visualization.PieChart(document.getElementById("piechart_fails"));
+		testPie.draw(dataTestPie, optionsClassPie);	  
+		
+		var classColumns = new google.visualization.ColumnChart(document.getElementById("barchart_fails"));
+		classColumns.draw(dataTestPie, optionsClassColumn);			
+		
 	  
 		// Create Country Pie Chart
 		var countryPie = new google.visualization.PieChart(document.getElementById("piechart_country"));
@@ -425,7 +566,7 @@ Print <<< END
 		google.visualization.events.addListener(chart, 'ready',
 		function() {
 			button.disabled = false;
-			button.value = 'Switch to ' + (current ? 'Total' : 'Percent');
+			button.innerHTML = (current ? "<i class='fa fa-align-right fa-rotate-90'></i>" : "<i class='fa fa-align-justify fa-rotate-90'></i>") + ' Switch to ' + (current ? 'Total' : 'Percent');
 		});
 		options['title'] = (current ? 'Percent' : 'Total') + ' for each Class in an Interval';
 		
