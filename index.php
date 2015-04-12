@@ -8,13 +8,8 @@ doPageOpen();
 ////
 //Build WHERE clauses based on form data
 ///
-/*
-print "<pre>";
-print_r($_POST);
-print "</pre>";
-*/
-$formOptions=array("classes", "tests", "countries");
-$formOption= array("class", "test", "country");
+$formOptions=array("classes", "tests", "countries", "sender");
+$formOption= array("class", "test", "country", "sendingIP");
 foreach ($formOptions as $optionKey => $option){
 	if($_POST[$option]){
 		if($where=="") $where.=" WHERE "; else $where.=" AND ";
@@ -36,130 +31,15 @@ foreach ($formOptions as $optionKey => $option){
 
 
 ////
-//Build data for graph and table.
+//Build data for Class charts
 ///
-$timeline="tl.addColumn('datetime', 'Time');
-";
-
-$graphHead="['Class";
-$percentHead="['Class'";
-$classPieData="['Class', 'Messages']";
-
-$i=1;
-$j=0;
-$k=0;
-
-if(!$where){
-	$OtherRecords=mysql_num_rows(mysql_query("select id from securetide"));
-	$OtherFails=mysql_num_rows(mysql_query("select id from test_fails"));
-}
-
-$classQuery=mysql_query("select count(distinct(emailID)) as count, className as name from v_data{$where} group by name order by count desc, name asc limit 9");
-while($class=mysql_fetch_array($classQuery)){
-	$timeline.="tl.addColumn('number', '{$class[name]}');
-";
-	$graphHead .= "', '" . $class[name];
-	$percentHead.=", '{$class[name]}', { type: 'string', role: 'tooltip', p:{html:'true'}}";
-	$classPieData.=",
-	['{$class[name]}', {$class[count]}]";
-	$classes[$j]=$class[name];
-	$table[0][$class[name]]=$class[name];
-	$OtherRecords-=$class[count];
-	$j++;
-}
-//Only build "Other" field if data isn't being filtered
-if(!$where){
-	$timeline.="tl.addColumn('number', 'Other');
-tl.addRows([";
-	$classPieData.=",
-	['Other', $OtherRecords]";
-	$graphHead .= "', 'Other']";
-	$percentHead.=", 'Other', { type: 'string', role: 'tooltip', p:{html:'true'}}]";
-}else{
-	$timeline.="tl.addRows([";
-	$graphHead.="']";
-	$percentHead.="]";
-}
-$hourlyClassQuery=mysql_query("SELECT COUNT(distinct(emailID)) as count, YEAR(date) as year, MONTH(date) as month,
-									  DAY(date) as day, HOUR(date) as hour, className, date,
-									  CASE
-										WHEN minute(date) BETWEEN 0 and 14 THEN '00'
-										WHEN minute(date) BETWEEN 15 and 29 THEN '15'
-										WHEN minute(date) BETWEEN 30 and 44 THEN '30'
-										WHEN minute(date) BETWEEN 45 and 59 THEN '45'
-									  END AS intervals
-							   FROM v_data{$where}
-							   GROUP BY year, month, day, hour, intervals, className 
-							   ORDER BY year asc, month asc, day asc, hour asc, intervals asc, className asc");
-
-while($hourlyClass=mysql_fetch_array($hourlyClassQuery)){
-	
-	$interval="{$hourlyClass[year]}-{$hourlyClass[month]}-{$hourlyClass[day]} {$hourlyClass[hour]}:{$hourlyClass[intervals]}:00";
-	$jsMonth="01";
-	if($hourlyClass[hour]<10){
-		$jsHour="0".$hourlyClass[hour];
-	}else{
-		$jsHour=$hourlyClass[hour];
-	}
-	$jshours[$k]="{$hourlyClass[year]}-{$jsMonth}-{$hourlyClass[day]}T{$jsHour}:{$hourlyClass[intervals]}:00Z";
-	$hour=date('m-d g:i A',strtotime($interval));
-	
-	$lastStamp=$stamp;
-	//$stamp=date('Y-m-d H:i', strtotime($interval));
-	$stamp=$interval;
-	
-	if($lastStamp==""){
-		$hours[0]=$stamp;
-	}elseif($lastStamp!=$stamp){
-		$k++;
-		$hours[$k]=$stamp;
-	}
-	if(!in_array($hourlyClass[className], $classes)){
-		$other[$k]+=$hourlyClass[count];
-	}
-	
-	$table[$stamp][0]=$hour;
-	$table[$stamp][$hourlyClass[className]]=$hourlyClass[count];
-	$hourlyTotal[$k]+=$hourlyClass[count];
-}
-print mysql_error();
+include('buildClassData.php');
 
 
-$x=0;
-$tableData="";
-while($x<$k){
-	$timeline.="	[new Date(\"{$jshours[$x]}\")";
-	$tableData.="['".$table[$hours[$x]][0]."'";
-	$tableDataPercent.="['".$table[$hours[$x]][0]."'";
-	$y=0;
-	while($y<$j){
-		if($table[$hours[$x]][$classes[$y]]=="") $table[$hours[$x]][$classes[$y]]=0;
-		$timeline.=", {$table[$hours[$x]][$classes[$y]]}";
-		$tableData.=", {$table[$hours[$x]][$classes[$y]]}";
-		$percent=$table[$hours[$x]][$classes[$y]]*100/$hourlyTotal[$x];
-		$tooltip=round($percent, 1);
-		$tableDataPercent.=", {$percent}, '<div style=\"padding:1em;\"><strong>{$table[$hours[$x]][0]}</strong><br /><br />{$classes[$y]}: <strong>{$table[$hours[$x]][$classes[$y]]} ({$tooltip}%)</strong></div>'";
-		$y++;
-	}
-	//Only build "Other" field if data isn't being filtered
-	if(!$where){
-		$timeline.=", ".$other[$x];
-		$tableData.=", ".$other[$x];
-		$otherPercent=$other[$x]*100/$hourlyTotal[$x];
-		$otherTooltip=round($otherPercent, 1);
-		$tableDataPercent.=", {$otherPercent}, '<div style=\"padding:1em;\"><strong>{$hours[$x]}</strong><br /><br />Other: <strong>{$otherTooltip}%</strong></div>'";
-	}
-	$closer="], 
-";
-	$timeline.=$closer;
-	$tableData.=$closer;
-	$tableDataPercent.=$closer;
-	$x++;
-}
-$timeline=substr($timeline, 0, -4);
-$timeline.="]);";
-$tableData=substr($tableData, 0, -4);
-$tableDataPercent=substr($tableDataPercent, 0, -4);
+////
+//Build data for Test charts
+///
+include('buildTestData.php');
 
 
 ////
@@ -174,23 +54,8 @@ while($country=mysql_fetch_array($countryPieQuery)){
 }
 
 
-/*
-////
-//Build Tests Pie
-///
-$testPieData="['Test', 'Messages']";
-$testPieQuery=mysql_query("select test, count(failID) as count from v_data{$where} group by test order by count desc limit 14");
-while($fail=mysql_fetch_array($testPieQuery)){
-	$testPieData.=",
-	['{$fail[test]}', {$fail[count]}]";
-	$OtherFails-=$fail[count];
-}
-if(!$where){
-	$testPieData.=",
-	['Other', {$OtherFails}]";
-}
 
-*/
+
 ////
 //Inside the <head>:
 ///
@@ -265,12 +130,14 @@ while($test=mysql_fetch_array($testQuery)){
 //All Countries
 $countryQuery=mysql_query("select id, name from countries order by name asc");
 while($country=mysql_fetch_array($countryQuery)){
+	if(in_array($country[id], $_POST[tests])) $selected=" selected"; else $selected=null;
 	$countryOptions.="<option value='{$country[id]}'>{$country[name]}</option>";
 }
 
 //All Senders
 $senderQuery=mysql_query("select sendingIP, count(id) as count from securetide group by sendingIP order by count desc limit 20");
 while($sender=mysql_fetch_array($senderQuery)){
+	if(in_array($sender[sendingIP], $_POST[tests])) $selected=" selected"; else $selected=null;
 	$senderOptions.="<option value='{$sender[sendingIP]}'>{$sender[sendingIP]}</option>";
 }
 
@@ -283,7 +150,7 @@ Print <<< END
 				<form action="{$_PHP[self]}#classes" method="post">
 					<div style="float:left;"><fieldset>
 						<legend>Classes</legend>
-						<select name="classesSelect"><option value="0">Exclude</option><option value="1"{$includeSelected[classes]}>Include</option></select><br />
+						<select name="classesSelect"><option value="0">Exclude</option><option value="1"{$includeSelected[classes]}>Show Only</option></select><br />
 						<select multiple name="classes[]">
 							<option value="top">[Top 9]</option>
 							{$classOptions}
@@ -292,8 +159,8 @@ Print <<< END
 					
 					<div style="float:left;"><fieldset>
 						<legend>Tests</legend>
-						<select name="classesSelect"><option value="0">Exclude</option><option value="1"{$includeSelected[tests]}>Include</option></select><br />
-						<select multiple name="classes[]">
+						<select name="testsSelect"><option value="0">Exclude</option><option value="1"{$includeSelected[tests]}>Show Only</option></select><br />
+						<select multiple name="tests[]">
 							<option value="top">[Top 9]</option>
 							{$testOptions}
 						</select>
@@ -301,7 +168,7 @@ Print <<< END
 					
 					<div style="float:left;"><fieldset>
 						<legend>Countries</legend>
-						<select name="countriesSelect"><option value="0">Exclude</option><option value="1"{$includeSelected[countries]}>Include</option></select><br />
+						<select name="countriesSelect"><option value="0">Exclude</option><option value="1"{$includeSelected[countries]}>Show Only</option></select><br />
 						<select multiple name="countries[]">
 							<option value="top">[Top 9]</option>
 							{$countryOptions}
@@ -310,8 +177,8 @@ Print <<< END
 					
 					<div style="float:left;"><fieldset>
 						<legend>Top Senders</legend>
-						<select name="senderSelect"><option value="0">Exclude</option><option value="1">Include</option></select><br />
-						<select multiple name="senders[]">
+						<select name="senderSelect"><option value="0">Exclude</option><option value="1"{$includeSelected[sender]}>Show Only</option></select><br />
+						<select multiple name="sender[]">
 							<option value="top">[Top 9]</option>
 							{$senderOptions}
 						</select>
@@ -325,7 +192,7 @@ Print <<< END
 	
 	
 	
-	
+
    <section id="classes" class="container content-section text-center">
         <div class="row">
             <div class="col-lg-12">
@@ -333,8 +200,8 @@ Print <<< END
 				
 				<button type="button" class="btn btn-info" data-toggle="collapse" data-target="#classStack">Stacked by Interval</button>
 				<div id="classStack" class="collapse in">
-					<form style="text-align:left;">
-						<button type="button" class="btn btn-default btn-lg" id="b1" />
+					<form name="clss" id="clss" style="text-align:left;">
+						<button type="button" class="btn btn-default btn-lg" id="classButton" />
 							<i class='fa fa-align-justify fa-rotate-90'></i> Switch to Percent
 						</button>
 					</form>
@@ -363,10 +230,25 @@ Print <<< END
 	</section>
 	
 	
-	<section id="tests" class="container content-section text-center">
-		<div class="row">
-			<div class="col-lg-12">
-				<h2>Tests Failed Data</h2>
+   <section id="tests" class="container content-section text-center">
+        <div class="row">
+            <div class="col-lg-12">
+                <h2>Test Data</h2>
+				
+				<button type="button" class="btn btn-info" data-toggle="collapse" data-target="#testStack">Stacked by Interval</button>
+				<div id="testStack" class="collapse in">
+					<form name="tests" id="tests" style="text-align:left;">
+						<button type="button" class="btn btn-default btn-lg" id="testButton" />
+							<i class='fa fa-align-justify fa-rotate-90'></i> Switch to Percent
+						</button>
+					</form>
+					<div class="chartHolder" id="testcolumnchart_values" style="width:99%;height:450px;"></div>
+				</div>
+				
+				<button type="button" class="btn btn-info" data-toggle="collapse" data-target="#testTimeline">Test Timeline</button>
+				<div id="testTimeline" class="collapse in">
+					<div class="chartHolder" id="testtimeline_div" style="width:99%;height:450px;"></div>
+				</div>
 				
 				<button type="button" class="btn btn-info" data-toggle="collapse" data-target="#failTotals">Test Fail Totals</button>
 				<div id="failTotals" class="collapse in">
@@ -417,11 +299,15 @@ Print <<< END
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 <script type="text/javascript">
 	var tl,
+		tlTest,
 		tlOptions,
 		data=[],
+		testData=[],
 		chart,
+		testChart,
 		options,
 		current=0,
+		testCurrent=0,
 		dataClassPie,
 		dataTestPie,
 		optionsClassPie,
@@ -431,19 +317,28 @@ Print <<< END
 		dataHeatMap,
 		optionsHeatMap;
 	
-	google.load("visualization", "1", {packages:["corechart", "geomap", "annotatedtimeline", "controls"]});
+	google.load("visualization", "1", {packages:["corechart", "geomap", "annotatedtimeline"]});
 	google.setOnLoadCallback(getVars);
 	
-	var button = document.getElementById('b1');
+	var button = document.getElementById('classButton');
 	button.onclick = function() {
 		current = 1 - current;
 		drawColumnChart();
 	}
 	
+	var testButton = document.getElementById('testButton');
+	testButton.onclick = function() {
+		testCurrent = 1 - testCurrent;
+		drawTestColumnChart();
+	}
+		
 	function getVars(){
 		//Timeline Values
 		tl = new google.visualization.DataTable();
 		{$timeline}
+		tlTest=new google.visualization.DataTable();
+		{$testTimeline}
+		
 		tlOptions = {
 			displayAnnotations: 'false',
 			scaleType: 'maximized',
@@ -456,8 +351,14 @@ Print <<< END
 		var row2 = [{$percentHead}, {$tableDataPercent}];
 		data[0] = google.visualization.arrayToDataTable(row1);
 		data[1] = google.visualization.arrayToDataTable(row2);
+		
+		var testRow1 = [{$testGraphHead}, {$testTableData}];
+		var testRow2 = [{$testPercentHead}, {$testTableDataPercent}];
+		testData[0] = google.visualization.arrayToDataTable(testRow1);
+		testData[1] = google.visualization.arrayToDataTable(testRow2);
+		
+		
 		options = {
-			title: 'Emails by Class over Time',
 			height: 450,
 			chartArea: { left: 50, width: '100%' },
 			legend: { position: 'top', maxLines: 10 },
@@ -474,6 +375,7 @@ Print <<< END
 			}
 		};
 		chart = new google.visualization.ColumnChart(document.getElementById("columnchart_values"));
+		testChart = new google.visualization.ColumnChart(document.getElementById("testcolumnchart_values"));
 
 	
 		//Class Pie+Column Chart Data
@@ -528,9 +430,13 @@ Print <<< END
 	
 	function drawChart() {
 	
-		//Create Timeline
+		//Create Class Timeline
 		var timeline = new google.visualization.AnnotatedTimeLine(document.getElementById('timeline_div'));
         timeline.draw(tl, tlOptions);
+		
+		//Create Test Timeline
+		var testTimeline = new google.visualization.AnnotatedTimeLine(document.getElementById('testtimeline_div'));
+        testTimeline.draw(tlTest, tlOptions);
 		
 		
 		// Create Class Pie and Column Chart
@@ -558,6 +464,7 @@ Print <<< END
         heatMap.draw(dataHeatMap, optionsHeatMap);
 		
 		drawColumnChart();
+		drawTestColumnChart();
 	}
 	
 	function drawColumnChart() {
@@ -568,9 +475,20 @@ Print <<< END
 			button.disabled = false;
 			button.innerHTML = (current ? "<i class='fa fa-align-right fa-rotate-90'></i>" : "<i class='fa fa-align-justify fa-rotate-90'></i>") + ' Switch to ' + (current ? 'Total' : 'Percent');
 		});
-		options['title'] = (current ? 'Percent' : 'Total') + ' for each Class in an Interval';
 		
 		chart.draw(data[current], options);
+	}
+	
+	function drawTestColumnChart() {
+		// Disabling the button while the chart is drawing.
+		testButton.disabled = true;
+		google.visualization.events.addListener(testChart, 'ready',
+		function() {
+			testButton.disabled = false;
+			testButton.innerHTML = (current ? "<i class='fa fa-align-right fa-rotate-90'></i>" : "<i class='fa fa-align-justify fa-rotate-90'></i>") + ' Switch to ' + (current ? 'Total' : 'Percent');
+		});
+		
+		testChart.draw(testData[testCurrent], options);
 	}
 
 	  
