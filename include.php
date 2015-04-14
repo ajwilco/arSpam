@@ -5,6 +5,9 @@ error_reporting(E_ERROR | E_PARSE);
 #ini_set('display_errors', TRUE);
 #ini_set('display_startup_errors', TRUE);
 
+ini_set('max_execution_time', 120);
+
+
 $shutDown="FALSE";
 $downRes="";
 

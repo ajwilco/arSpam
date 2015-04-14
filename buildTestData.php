@@ -11,11 +11,11 @@ $j=0; //Test Counter
 $k=0; //Interval Counter
 
 if(!$where){
-	$testOtherFails=mysql_num_rows(mysql_query("select id from test_fails"));
+	$testOtherFails=mysql_num_rows(mysql_query("select test_fails.id from test_fails, tests where tests.id=test_fails.test{$testWhere}"));
 	$testLimit=" limit 14";
 }
 
-$testQuery=mysql_query("select count(emailID) as count, name from v_data join tests on tests like concat('%',name,'%') {$where} group by name order by count desc, name asc{$testLimit}");
+$testQuery=mysql_query("select count(emailID) as count, name from v_data join tests on tests like concat('%',name,'%') {$where}{$testWhere} group by name order by count desc, name asc{$testLimit}");
 while($test=mysql_fetch_array($testQuery)){
 	$testTimeline.="tlTest.addColumn('number', '{$test[name]}');
 ";
@@ -49,7 +49,7 @@ $hourlyTestQuery=mysql_query("SELECT COUNT(emailID) as count, YEAR(date) as year
 										WHEN minute(date) BETWEEN 30 and 44 THEN '30'
 										WHEN minute(date) BETWEEN 45 and 59 THEN '45'
 									  END AS intervals
-							   FROM v_data join tests on tests like concat('%',name,'%') {$where}
+							   FROM v_data join tests on tests like concat('%',name,'%') {$where}{$testWhere}
 							   GROUP BY year, month, day, hour, intervals, name
 							   ORDER BY year asc, month asc, day asc, hour asc, intervals asc, name asc");
 
@@ -119,9 +119,18 @@ while($k<=$intervalCount){
 	$testTableDataPercent.=$closer;
 	$k++;
 }
-$testTimeline=substr($testTimeline, 0, -4);
-$testTimeline.="]);";
-$testTableData=substr($testTableData, 0, -4);
-$testTableDataPercent=substr($testTableDataPercent, 0, -4);
+if($k!=1) {
+	$testTimeline=substr($testTimeline, 0, -4);
+	$testTimeline.="]);";
+	$testTableData=substr($testTableData, 0, -4);
+	$testTableDataPercent=substr($testTableDataPercent, 0, -4);
+}else{
+	$testTimeline=null;
+	$testTableData=null;
+	$testTableDataPercent=null;
+	$testGraphHead=null;
+	$testPercentHead=null;
+	$testPieData=null;
+}
 
 ?>
