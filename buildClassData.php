@@ -57,13 +57,7 @@ $hourlyClassQuery=mysql_query("SELECT COUNT(distinct(emailID)) as count, YEAR(da
 while($hourlyClass=mysql_fetch_array($hourlyClassQuery)){
 	
 	$interval="{$hourlyClass[year]}-{$hourlyClass[month]}-{$hourlyClass[day]} {$hourlyClass[hour]}:{$hourlyClass[intervals]}:00";
-	$jsMonth="01";
-	if($hourlyClass[hour]<10){
-		$jsHour="0".$hourlyClass[hour];
-	}else{
-		$jsHour=$hourlyClass[hour];
-	}
-	$jshours[$k]="{$hourlyClass[year]}-{$jsMonth}-{$hourlyClass[day]}T{$jsHour}:{$hourlyClass[intervals]}:00Z";
+	$jshours[$k]="{$hourlyClass[year]}, {$hourlyClass[month]}, {$hourlyClass[day]}, {$hourlyClass[hour]}, {$hourlyClass[intervals]}, 00";
 	$hour=date('m-d g:i A',strtotime($interval));
 	
 	$lastStamp=$stamp;
@@ -90,7 +84,7 @@ print mysql_error();
 $x=0;
 $tableData="";
 while($x<$k){
-	$timeline.="	[new Date(\"{$jshours[$x]}\")";
+	$timeline.="	[new Date({$jshours[$x]})";
 	$tableData.="['".$table[$hours[$x]][0]."'";
 	$tableDataPercent.="['".$table[$hours[$x]][0]."'";
 	$y=0;

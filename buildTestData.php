@@ -56,13 +56,7 @@ $hourlyTestQuery=mysql_query("SELECT COUNT(emailID) as count, YEAR(date) as year
 while($hourlyTest=mysql_fetch_array($hourlyTestQuery)){
 	
 	$interval="{$hourlyTest[year]}-{$hourlyTest[month]}-{$hourlyTest[day]} {$hourlyTest[hour]}:{$hourlyTest[intervals]}:00";
-	$jsMonth="01";
-	if($hourlyTest[hour]<10){
-		$jsHour="0".$hourlyTest[hour];
-	}else{
-		$jsHour=$hourlyTest[hour];
-	}
-	$jshours[$k]="{$hourlyTest[year]}-{$jsMonth}-{$hourlyTest[day]}T{$jsHour}:{$hourlyTest[intervals]}:00Z";
+	$jshours[$k]="{$hourlyTest[year]}, {$hourlyTest[month]}, {$hourlyTest[day]}, {$hourlyTest[hour]}, {$hourlyTest[intervals]}, 00";
 	$hour=date('m-d g:i A',strtotime($interval));
 	
 	$lastStamp=$stamp;
@@ -90,7 +84,7 @@ $intervalCount=$k;
 $k=1;
 $testTableData="";
 while($k<=$intervalCount){
-	$testTimeline.="	[new Date(\"{$jshours[$k]}\")";
+	$testTimeline.="	[new Date({$jshours[$k]})";
 	$testTableData.="['".$testTable[$k][0]."'";
 	$testTableDataPercent.="['".$testTable[$k][0]."'";
 	$testCount=$j;

@@ -23,7 +23,7 @@ Print <<< END
 		dataHeatMap,
 		optionsHeatMap;
 	
-	google.load("visualization", "1", {packages:["corechart", "geomap", "annotatedtimeline"]});
+	google.load("visualization", "1.1", {packages:["corechart", "geomap", "annotationchart"]});
 	google.setOnLoadCallback(getVars);
 	
 	var button = document.getElementById('classButton');
@@ -45,8 +45,26 @@ Print <<< END
 		
 		tlOptions = {
 			displayAnnotations: 'false',
+			fill: 25,
 			scaleType: 'maximized',
-			thickness: 2
+			thickness: 2,
+			legendPosition: 'newRow',
+			zoomButtonsOrder: [
+				'3-hours','6-hours','9-hours','12-hours','max'
+			],
+			zoomButtons: {
+				'3-hours':  { 'label': '3h',  'offset': [3, 0, 0] },
+				'6-hours':  { 'label': '6h',  'offset': [6, 0, 0] },
+				'9-hours':  { 'label': '9h',  'offset': [9, 0, 0] },
+				'12-hours': { 'label': '12h', 'offset': [12, 0, 0] },
+				'max': {
+					'label': 'max',
+					'range': {
+						'start': null,
+						'end': null
+					}
+				}
+			}
 		}
 	
 		
@@ -143,7 +161,7 @@ Print <<< END
 	function drawChart() {
 	
 		//Create Class Timeline
-		var timeline = new google.visualization.AnnotatedTimeLine(document.getElementById('timeline_div'));
+		var timeline = new google.visualization.AnnotationChart(document.getElementById('timeline_div'));
         timeline.draw(tl, tlOptions);		
 		
 		// Create Class Pie and Column Chart
@@ -168,7 +186,7 @@ END;
 		if($testTimeline!=""){
 Print <<< END
 			//Create Test Timeline
-			var testTimeline = new google.visualization.AnnotatedTimeLine(document.getElementById('testtimeline_div'));
+			var testTimeline = new google.visualization.AnnotationChart(document.getElementById('testtimeline_div'));
 			testTimeline.draw(tlTest, tlOptions);
 			
 			// Create Test Pie and Column Chart
